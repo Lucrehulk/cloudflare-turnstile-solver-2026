@@ -4,7 +4,7 @@ A proof-of-concept Cloudflare Turnstile bypass system built with Rust and JavaSc
 
 ---
 
-Still a work in progress.
+Still a work in progress. Do note I am now in college so I have a lot of things I am doing, I have much of the progress done for the top priority feature done, but it's not all done yet. Not sure when it'll be out exactly but it'll be somewhat soon since much of it is done.
 
 Top priority: 
 Add automatic browser solver startup.
