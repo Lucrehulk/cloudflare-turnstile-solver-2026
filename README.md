@@ -109,13 +109,14 @@ The http protocol is recommended. Some browsers have iffy implementation for soc
 
 ## Components
 
-The bypass is comprised of five main components:
+The bypass is comprised of six main components:
 
 1. **Token Harvester / Turnstile Widget Loader**
 2. **Turnstile Widget Identifier & Clicker**
 3. **Token Server**
 4. **Proxy Extensions**
 5. **Z-index Orderer**
+6. **Browser Launcher**
 
 ---
 
