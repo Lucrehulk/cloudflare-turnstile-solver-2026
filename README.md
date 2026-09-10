@@ -395,7 +395,7 @@ if (packet.byteLength > 5) {
 
 ## Future Plans/What this Needs (may not be done, but if major updates do occur to this project it will likely be these).
 
-Automatic, headless page loading with a docker. Plus Devtools protocol level overriding so standard overrides aren't required. Dockerizing and making this project headless could be huge for maximizing throughput. Plus it'd just make it feel less like a PoC and more like a fully fleshed out project. Do note, however, that due to the extreme CPU usage caused by browsers running Turnstile either way, that the benefits of the headless browser won't be as extreme, since CPU and not RAM is the main bottleneck due to all the tough JS challenges executed by Cloudflare especially. This would still serve as an optimization assuming it didn't result in Cloudflare flagging these sessions. Also you'd haevto lose the OS level click in favor of a browser protocol level click which isn't a huge issue but it is a difference. Point is it'd take a lot of work.
+Browser Launcher improvements.
 
 WebGL debug info spoofing (currently items like vendor are not spoofed, however without proper canvas fingerprinting to associate with these modifying such fields could make you get flagged, especially on browsers like Chrome where by default there is no anti-canvas fingerprinting).
 
