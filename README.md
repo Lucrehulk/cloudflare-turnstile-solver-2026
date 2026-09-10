@@ -32,6 +32,7 @@ Still may be subject to change. Do note I am now in college so I have a lot of t
 | The solver is **not headless** — a GUI is required. With dockerization this could be fixed. |
 | Ineffective for general, random web-scraping. Knowing the websites it will be used on is most effective. |
 | No custom fingerprint spoofing for TLS/JA4, canvas, and other metrics like navigator values. But, given the legitimacy of the browsers, this isn't as severe as usual. |
+| Still a decent chunk of initial manual setup required. The automation of the harvester itself though is good. |
 
 | Minor |
 | :--- |
