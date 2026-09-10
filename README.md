@@ -273,15 +273,27 @@ This component introduces automatic browser detection and launching. It has two 
 
 **find_browsers.rs:** This binary does as the name suggests, it simply has a list of browser definitions (like paths to look in, arguments to run them, etc.), and searches for those browsers on your device. However, it also can create custom browser profiles (since Cloudflare does not analyze profile integrity) that already have the proxy extension preloaded onto them (given as an argument). You can specify the amount of profiles you want for each browser, plus the path to your unpacked proxy extension, in the CLargs. Profile data is written to the browser_profiles directory, and ./browser_binaries.txt gets the browser shell execution data. Both are wiped and regenerated on each run. Browser keys follow a name + number schema. so `edge 3` generates `edge1`, `edge2`, `edge3`, which are the keys you pass to main.rs.
 
+**Setup:**
+
+You simply need to know the command and its arguments.
+
 Structure: `cargo run --bin find_browsers -- [browser count]... path\to\extension`
 
 Example: `cargo run --bin find_browsers -- edge 5 chrome 2 "C:\path\to\extension"`
 
 **main.rs:** This binary makes use of the Win32 crate again (as the Z-index Orderer also does). It uses the definitions provided by find_browsers to run browsers of your choice, and using the Win32 capabilities it can set the positions and dimensions (or geometry) of these browsers. Windows are arranged left-to-right (the Turnstile Widget loads in the top left corner). The positions wrap around and then move down in the Y direction once they go past the visible window dimension, this way the checkboxes remain visible. Also note all browsers that were spawned will close once you exit the process.
 
+**Setup:**
+
+Again, you need to just know the command and its arguments.
+
 Structure: `cargo run --bin main -- url width height spacing_x spacing_y [key...]`
 
 Example: `cargo run --bin main -- "https://example.com" 280 490 300 510 edge1 edge2 edge3 edge4 edge5 chrome1 chrome2`
+
+**How it Works:**
+
+find_browsers is relatively simple. It simply already has the table of browser definitions in it already, and it uses that to search for browsers, and then write the custom shell execution commands and custom profile data to the correct locations as specified previously. Main.rs is more complicated as, much like the **Z-index Orderer**, it uses the Win32 Crate to manage PIDs and HWNDs again, and it uses the provided functions to set window positions and set their geometries. 
 
 ---
 
