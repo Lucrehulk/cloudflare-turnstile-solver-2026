@@ -89,8 +89,6 @@ Note that this is also on a singular device. If expanded to multiple devices (si
 
 The only issue regarding throughput right now, and also mass automation, is this system's requirement of manually loading tabs to solve this. The system is not headless. Perhaps a solution like dockering with a virtual framebuffer could do this, or some sort of standard equivalent. However, this would usually not make a major difference as the Cloudflare challenges result in mainly a CPU bottleneck, and CPU performance would only receive a minor boost from this. Plus, this would also take a lot of work to do, and eliminate OS level gui clicking. You'd have to click at the browser level. 
 
-Automatic page loader may also work but also brings a lot of depth. These are problems that can be tackled if I have time and want to do this--or someone sees promise in the theory proposed by this repository and pursues perfection of it.
-
 Still, as explained, throughput is very high, particularly due to the extremely low latency combined with the fact you can still easily get multiple solvers up. 
 
 ### Overall
