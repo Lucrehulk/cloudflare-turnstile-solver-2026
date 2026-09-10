@@ -4,11 +4,7 @@ A proof-of-concept Cloudflare Turnstile bypass system built with Rust and JavaSc
 
 ---
 
-Still a work in progress. Do note I am now in college so I have a lot of things I am doing, I have much of the progress done for the top priority feature done, but it's not all done yet. Not sure when it'll be out exactly but it'll be somewhat soon since much of it is done.
-
-Top priority: 
-Add automatic browser solver startup.
-All solver binaries run and perfectly set up browsers.
+Still may be subject to change. Do note I am now in college so I have a lot of things I am doing, I have much of the progress done for the top priority feature done, but it's not all done yet. Not sure when it'll be out exactly but it'll be somewhat soon since much of it is done.
 
 ---
 
@@ -36,14 +32,12 @@ All solver binaries run and perfectly set up browsers.
 | The solver is **not headless** — a GUI is required. With dockerization this could be fixed. |
 | Ineffective for general, random web-scraping. Knowing the websites it will be used on is most effective. |
 | No custom fingerprint spoofing for TLS/JA4, canvas, and other metrics like navigator values. But, given the legitimacy of the browsers, this isn't as severe as usual. |
-| Browsers must be manually started as of now. No automation is in place for that. |
 
 | Minor |
 | :--- |
 | The method relies on a browser with overrides enabled. |
 | Designed for smaller-scale token harvesting, though the token server architecture does support larger-scale operations. |
 | Tunneling multiple proxies through each iframe is not supported. Do note this may potentially be added in the future if a feasible solution (some form of advanced tunneling) is found. Note that per-window proxying, however, is supported. |
-| For current setup, you have to actually install the extension onto each browser. With CDP though, since the extension is saved this setup is only required once. |
 
 ---
 
@@ -269,15 +263,38 @@ Windows OS uses the "handle to window" (HWND) mechanism to identify different wi
 
 ---
 
+### 6. Browser Launcher
+
+**Note this is currently only designed for Windows. Not going to add implementation for other operating systems myself, but pull requests are welcome.**
+
+**Also note, though this component does automatically launch and position the browsers, for some certain browsers (like Google Chrome) the custom profile login currently does not work, and you have to log in with your own profile. It works better on browsers like Edge where this does work.**
+
+This component introduces automatic browser detection and launching. It has two key binaries: main.rs, and find_browsers.rs. An explanation for each--and the arguments to pass--is provided below. 
+
+**find_browsers.rs:** This binary does as the name suggests, it simply has a list of browser definitions (like paths to look in, arguments to run them, etc.), and searches for those browsers on your device. However, it also can create custom browser profiles (since Cloudflare does not analyze profile integrity) that already have the proxy extension preloaded onto them (given as an argument). You can specify the amount of profiles you want for each browser, plus the path to your unpacked proxy extension, in the CLargs. Profile data is written to the browser_profiles directory, and ./browser_binaries.txt gets the browser shell execution data. Both are wiped and regenerated on each run. Browser keys follow a name + number schema. so `edge 3` generates `edge1`, `edge2`, `edge3`, which are the keys you pass to main.rs.
+
+Structure: `cargo run --bin find_browsers -- [browser count]... path\to\extension`
+
+Example: `cargo run --bin find_browsers -- edge 5 chrome 2 "C:\path\to\extension"`
+
+**main.rs:** This binary makes use of the Win32 crate again (as the Z-index Orderer also does). It uses the definitions provided by find_browsers to run browsers of your choice, and using the Win32 capabilities it can set the positions and dimensions (or geometry) of these browsers. Windows are arranged left-to-right (the Turnstile Widget loads in the top left corner). The positions wrap around and then move down in the Y direction once they go past the visible window dimension, this way the checkboxes remain visible. Also note all browsers that were spawned will close once you exit the process.
+
+Structure: `cargo run --bin main -- url width height spacing_x spacing_y [key...]`
+
+Example: `cargo run --bin main -- "https://example.com" 280 490 300 510 edge1 edge2 edge3 edge4 edge5 chrome1 chrome2`
+
+---
+
 ## Starting It Up
 
-1. Start the **token server**.
-2. Start the **auto-clicker**.
-3. Start the **z-index-orderer**.
-4. Open your **modified webpages**.
-5. Press **F8** to enable the auto-clicker.
-6. Start your backend, token managing and requesting system. 
-7. Watch it go.
+1. Generate your browser profile and binary definitions (**browser_launcher, find_browsers.rs**).
+2. Start the **token server**.
+3. Start the **auto-clicker**.
+4. Start the **z-index-orderer**.
+5. Either automatically load your browsers (**browser_launcher, main.rs**), or manually open them (or a combination of both).
+6. Press **F8** to enable the auto-clicker.
+7. Start your backend, token managing and requesting system. 
+8. Watch it go.
 
 ---
 
