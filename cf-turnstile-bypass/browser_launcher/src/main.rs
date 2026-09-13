@@ -327,7 +327,7 @@ fn main() {
 
     let browsers = parse_browser_binaries("./browser_binaries.txt");
 
-    // Resolve keys to their tokenised commands.
+    // Resolve keys to their tokenized commands.
     let resolved: Vec<(&str, Vec<String>)> = browser_keys
         .iter()
         .filter_map(|key| browsers.get(*key).map(|cmd| (*key, tokenise(cmd))))
