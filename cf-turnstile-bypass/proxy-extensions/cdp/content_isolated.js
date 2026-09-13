@@ -1,8 +1,26 @@
 // Request our payload from the background and forward it to the main context.
-chrome.runtime.sendMessage({ action: "get_inject_payload" }, (payload) => {
-    if (!payload) return;
-    window.postMessage({ type: "SET_LOCALSTORAGE_INJECT", payload }, "*");
-});
+(function request_inject_payload(attempt) {
+    const MAX_RETRIES = 10;
+    const RETRY_DELAY_MS = 150;
+
+    chrome.runtime.sendMessage({ action: "get_inject_payload" }, (payload) => {
+        if (chrome.runtime.lastError) {
+            if (attempt < MAX_RETRIES) {
+                setTimeout(() => request_inject_payload(attempt + 1), RETRY_DELAY_MS);
+            }
+            return;
+        }
+
+        if (payload && (payload.inject_config || payload.proxies)) {
+            window.postMessage({ type: "SET_LOCALSTORAGE_INJECT", payload }, "*");
+            return;
+        }
+
+        if (attempt < MAX_RETRIES) {
+            setTimeout(() => request_inject_payload(attempt + 1), RETRY_DELAY_MS);
+        }
+    });
+})(0);
 
 window.addEventListener("message", (event) => {
     // Data must come from our own webpage.
