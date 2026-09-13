@@ -257,6 +257,8 @@ You can a config value in `main.rs` for a for a z-order enforcement loop/thread 
 
 **When you run this, press F7 to turn off the new page checking loop this component runs in order to check for new pages. You can turn it back on by pressing F7 again too. It is toggleable, but on by default so you can add new pages. Once you are done loading pages, you can toggle this off to save performance.**
 
+**Press F9 to toggle on/off the Z-order enforcement loop (off by default).**
+
 **How it Works:**
 
 Windows OS uses the "handle to window" (HWND) mechanism to identify different windows. This script first initially gets all pre-existing windows when it first runs and stores their HWNDs, this is used for comparison when checking for new windows so we can ignore windows that were already pre-existing. Then, there are two "worker" threads that we use as loops. One checks for new windows. When a new window is created, it is tracked by its HWND and assigned a hard z-index. The other actually enforces the z-order of all tabs. It simply goes over all tracked windows and actually enforces the z-index by using the `setWindowPos` method. Note newer tabs are placed on top, and older tabs go below. 
