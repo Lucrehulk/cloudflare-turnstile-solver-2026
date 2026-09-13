@@ -1,18 +1,4 @@
-// Write localStorage data at the start of each page.
-// Config values are loaded from the inject config file via the background payload.
-(function () {
-    window.addEventListener("message", function on_config_inject(event) {
-        if (event.source != window || !event.data) return;
-        if (event.data.type != "SET_LOCALSTORAGE_INJECT") return;
-
-        event.data.payload.inject_config.split("\n").forEach((line) => {
-            let [key, value] = line.split(/:(.*)/);
-            localStorage[key.trim()] = value.trim();
-        });
-
-        window.removeEventListener("message", on_config_inject);
-    });
-})();
+let _config_injected = false;
 
 // Native toString spoof helper.
 let native_to_string = function toString() {
@@ -37,10 +23,27 @@ window.addEventListener("message", (event) => {
     // Data must come from our own webpage.
     if (event.source != window || !event.data) return;
 
-    // Write the proxies list to localStorage once the background has read and relayed it.
     if (event.data.type == "SET_LOCALSTORAGE_INJECT") {
+        if (_config_injected) return;
+        _config_injected = true;
         try {
-            if (event.data.payload.proxies != null) localStorage.proxies = event.data.payload.proxies;
+            let payload = event.data.payload;
+
+            if (payload.inject_config) {
+                payload.inject_config.split("\n").forEach((line) => {
+                    line = line.trim();
+                    if (!line) return;
+                    let idx = line.indexOf(":");
+                    if (idx == -1) return;
+                    let key = line.slice(0, idx).trim();
+                    let value = line.slice(idx + 1).trim();
+                    if (key) localStorage[key] = value;
+                });
+            }
+
+            if (payload.proxies != null) {
+                localStorage.proxies = payload.proxies;
+            }
         } catch (e) {}
         return;
     }
