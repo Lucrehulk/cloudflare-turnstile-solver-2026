@@ -97,7 +97,7 @@
                     }
                 });
     
-                window.token_server_socket = new WebSocket(TOKEN_SERVER_HOST);
+                window.token_server_socket = new WebSocket(window.token_server_host);
                 token_server_socket.binaryType = "arraybuffer";
     
                 token_server_socket.onopen = function () {
