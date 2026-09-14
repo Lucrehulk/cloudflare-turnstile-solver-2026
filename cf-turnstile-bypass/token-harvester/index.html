@@ -111,7 +111,9 @@
                     window.solver_idx = packet.getUint32(0, true);
                     window.requester_id = packet.getUint32(4, true);
                     window.js_API_spoof_fields = {};
-                    window.extra_cf_turnstile_render_fields = {};
+                    window.extra_cf_turnstile_render_fields = {
+                        "theme": "light"
+                    };
                     let ptr = 8;
                     let decoder = new TextDecoder();
                     while (ptr < packet_u8.length) {
