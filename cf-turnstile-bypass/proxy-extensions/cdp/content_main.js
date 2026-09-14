@@ -1,4 +1,5 @@
-let _config_injected = false;
+let _inject_config_written = false;
+let _proxies_written = false;
 
 // Native toString spoof helper.
 let native_to_string = function toString() {
@@ -24,24 +25,24 @@ window.addEventListener("message", (event) => {
     if (event.source != window || !event.data) return;
 
     if (event.data.type == "SET_LOCALSTORAGE_INJECT") {
-        if (_config_injected) return;
-        _config_injected = true;
         try {
             let payload = event.data.payload;
 
-            if (payload.inject_config) {
+            if (payload.inject_config && !_inject_config_written) {
+                _inject_config_written = true;
                 payload.inject_config.split("\n").forEach((line) => {
                     line = line.trim();
                     if (!line) return;
                     let idx = line.indexOf(":");
                     if (idx == -1) return;
-                    let key = line.slice(0, idx).trim();
+                    let key = line.slice(0, idx).trim().toLowerCase();
                     let value = line.slice(idx + 1).trim();
                     if (key) localStorage[key] = value;
                 });
             }
 
-            if (payload.proxies != null) {
+            if (payload.proxies != null && !_proxies_written) {
+                _proxies_written = true;
                 localStorage.proxies = payload.proxies;
             }
         } catch (e) {}
