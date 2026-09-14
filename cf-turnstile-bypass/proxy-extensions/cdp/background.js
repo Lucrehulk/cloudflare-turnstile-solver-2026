@@ -1,10 +1,10 @@
 // Paths config for this background script to read files from, for proxies and our override script.
 
-const PROXIES_LIST_PATH = String.raw`C:\Users\image\OneDrive\Documents\cloudflare-turnstile-solver-2026-main\cloudflare-turnstile-solver-2026-main\cf-turnstile-bypass\proxies.txt`;
+const PROXIES_LIST_PATH = String.raw``;
 
-const OVERRIDE_FILE_PATH = String.raw`C:\Users\image\OneDrive\Documents\cloudflare-turnstile-solver-2026-main\cloudflare-turnstile-solver-2026-main\cf-turnstile-bypass\token-harvester\index.html`;
+const OVERRIDE_FILE_PATH = String.raw``;
 
-const INJECT_CONFIG_FILE_PATH = String.raw`C:\Users\image\OneDrive\Documents\cloudflare-turnstile-solver-2026-main\cloudflare-turnstile-solver-2026-main\cf-turnstile-bypass\proxy-extensions\inject_config.txt`;
+const INJECT_CONFIG_FILE_PATH = String.raw``;
 
 // Object map for proxy ID info.
 let active_proxy = null;
@@ -187,15 +187,19 @@ chrome.runtime.onMessage.addListener((message, sender, send_response) => {
 
 // There can be errors if a message is sent to an uncreated offscreen document,
 // so this simply allows us to ensure it exists.
+let _offscreen_promise = null;
 async function ensure_offscreen_document() {
-    let existing = await chrome.offscreen.hasDocument();
-    if (!existing) {
-        await chrome.offscreen.createDocument({
-            url: "offscreen.html",
-            reasons: ["BLOBS"],
-            justification: "Read local override file via file:// fetch which is unavailable in service workers"
-        });
-    }
+    if (_offscreen_promise) return _offscreen_promise;
+    _offscreen_promise = chrome.offscreen.hasDocument().then((existing) => {
+        if (!existing) {
+            return chrome.offscreen.createDocument({
+                url: "offscreen.html",
+                reasons: ["BLOBS"],
+                justification: "Read local override file via file:// fetch which is unavailable in service workers"
+            });
+        }
+    });
+    return _offscreen_promise;
 }
 
 // Read the proxies file and cache it.
@@ -208,8 +212,6 @@ async function load_proxies_file() {
     });
 }
 
-load_proxies_file();
-
 // Read the inject config file and cache it.
 async function load_inject_config_file() {
     if (!INJECT_CONFIG_FILE_PATH) return;
@@ -220,6 +222,7 @@ async function load_inject_config_file() {
     });
 }
 
+load_proxies_file();
 load_inject_config_file();
 
 // Attach the debugger that listens for requests and overrides the target page file with our override to a tab.
