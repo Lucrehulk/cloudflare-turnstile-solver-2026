@@ -27,273 +27,275 @@
 <body>
     <div id="iframe-farm"></div>
     <script>
-        (async () => {   
-            // Timeout for proxy to connect, in ms.
-            const PROXY_CONNECT_TIMEOUT = parseInt(localStorage.proxy_connect_timeout);
-
-            // Boolean for if you want to use the multi-proxy system for solving.
-            const USE_PROXY_SOLVING = localStorage.use_proxy_solving == "true" ? true : false;
-
-            window.token_server_host = localStorage.token_server_host;
-            // Keep at one for now, feature is deprecated. May be utilized if efficient tunneling is implemented.
-            window.preload_iframes = 1;
-            window.sitekey = localStorage.sitekey;
-
-            // parse proxies by linesplitting and trimming.
-            let proxies = localStorage.proxies.split(/\r?\n/).map(p => p.trim()).filter(Boolean);
-
-            window.generate_fail_response_packet = function () {
-                let pkt = new Uint8Array(9);
-                pkt[0] = 0;
-                pkt[1] = window.top.requester_id & 255;
-                pkt[2] = (window.top.requester_id >> 8) & 255;
-                pkt[3] = (window.top.requester_id >> 16) & 255;
-                pkt[4] = (window.top.requester_id >> 24) & 255;
-                pkt[5] = window.top.solver_idx & 255;
-                pkt[6] = (window.top.solver_idx >> 8) & 255;
-                pkt[7] = (window.top.solver_idx >> 16) & 255;
-                pkt[8] = (window.top.solver_idx >> 24) & 255;
-                return pkt;
-            };
-
-            async function connect_to_proxy() {
-                let proxy = proxies[window.solver_idx];
-
-                console.log(`Requesting extension to bind tab to proxy: ${proxy}`);
-
-                return new Promise((resolve, reject) => {
-                    let timeout_id = setTimeout(() => {
-                        console.error("Proxy connection timed out after 5 seconds.");
-                        window.token_server_socket.send(window.generate_fail_response_packet());
-                    }, PROXY_CONNECT_TIMEOUT);
-
-                    let proxy_listener = function(event) {
-                        if (event.source != window || !event.data) return;
-                        
-                        if (event.data.type == "PROXY_READY") {
-                            clearTimeout(timeout_id);
-                            
-                            window.removeEventListener("message", proxy_listener);
-                            console.log("Extension confirmed: Proxy is live for this window.");
-                            resolve();
-                        }
-                    };
-                    
-                    window.addEventListener("message", proxy_listener);
-
-                    window.postMessage({
-                        type: "SET_TAB_PROXY",
-                        proxy_details: proxy,
-                        js_API_spoof_fields: window.js_API_spoof_fields
-                    }, "*");
-                });
-            }
-
-            document.addEventListener("keydown", async function (e) {
-                if (e.code == "KeyK") {
-                    window.token_server_socket.send(window.generate_fail_response_packet());
-                    location.reload();
-                }
-            });
-
-            window.token_server_socket = new WebSocket(TOKEN_SERVER_HOST);
-            token_server_socket.binaryType = "arraybuffer";
-
-            token_server_socket.onopen = function () {
-                token_server_socket.send(new Uint8Array([2, ...new TextEncoder().encode(navigator.userAgent)]));
-            };
-
-            token_server_socket.onmessage = async function (e) {
-                document.querySelectorAll('iframe').forEach(iframe => iframe.remove());
-                let packet = new DataView(e.data);
-                let packet_u8 = new Uint8Array(e.data);
-                window.solver_idx = packet.getUint32(0, true);
-                window.requester_id = packet.getUint32(4, true);
-                window.js_API_spoof_fields = {};
-                window.extra_cf_turnstile_render_fields = {};
-                let ptr = 8;
-                let decoder = new TextDecoder();
-                while (ptr < packet_u8.length) {
-                    let field_name_length = packet_u8[ptr++];
-                    let field_name = decoder.decode(packet_u8.slice(ptr, ptr + field_name_length));
-                    ptr = ptr + field_name_length;
-                    let field_value_length = packet_u8[ptr++];
-                    let field_value = decoder.decode(packet_u8.slice(ptr, ptr + field_value_length));
-                    ptr = ptr + field_value_length;
-                    if (field_name.indexOf(".") != -1) {
-                        window.js_API_spoof_fields[field_name] = field_value;
-                    } else {
-                        window.extra_cf_turnstile_render_fields[field_name] = field_value;
-                    };
+        setTimeout(() => {
+            (async () => {   
+                // Timeout for proxy to connect, in ms.
+                const PROXY_CONNECT_TIMEOUT = parseInt(localStorage.proxy_connect_timeout);
+    
+                // Boolean for if you want to use the multi-proxy system for solving.
+                const USE_PROXY_SOLVING = localStorage.use_proxy_solving == "true" ? true : false;
+    
+                window.token_server_host = localStorage.token_server_host;
+                // Keep at one for now, feature is deprecated. May be utilized if efficient tunneling is implemented.
+                window.preload_iframes = 1;
+                window.sitekey = localStorage.sitekey;
+    
+                // parse proxies by linesplitting and trimming.
+                let proxies = localStorage.proxies.split(/\r?\n/).map(p => p.trim()).filter(Boolean);
+    
+                window.generate_fail_response_packet = function () {
+                    let pkt = new Uint8Array(9);
+                    pkt[0] = 0;
+                    pkt[1] = window.top.requester_id & 255;
+                    pkt[2] = (window.top.requester_id >> 8) & 255;
+                    pkt[3] = (window.top.requester_id >> 16) & 255;
+                    pkt[4] = (window.top.requester_id >> 24) & 255;
+                    pkt[5] = window.top.solver_idx & 255;
+                    pkt[6] = (window.top.solver_idx >> 8) & 255;
+                    pkt[7] = (window.top.solver_idx >> 16) & 255;
+                    pkt[8] = (window.top.solver_idx >> 24) & 255;
+                    return pkt;
                 };
-                console.log("Solver idx: " + window.solver_idx);
-                console.log("Requester id: " + window.requester_id);
-                console.log("JavaScript API spoof fields: ", window.js_API_spoof_fields);
-                console.log("Extra render call fields: ", window.extra_cf_turnstile_render_fields);
-                if (USE_PROXY_SOLVING) await connect_to_proxy();
-                start_solvers();
-            };
-
-            let start_solvers = function () {
-                let farm = document.getElementById('iframe-farm');
-                let count = 0;
-
-                function layout() {
-                    let frames = farm.querySelectorAll('iframe');
-                    let n = frames.length;
-                    if (n == 0) return;
-
-                    frames.forEach(function (f, i) {
-                        f.style.left = (i * 2) + 'px';
-                        f.style.top = (i * 2) + 'px';
-                        f.style.width = '350px';
-                        f.style.height = '450px';
+    
+                async function connect_to_proxy() {
+                    let proxy = proxies[window.solver_idx];
+    
+                    console.log(`Requesting extension to bind tab to proxy: ${proxy}`);
+    
+                    return new Promise((resolve, reject) => {
+                        let timeout_id = setTimeout(() => {
+                            console.error("Proxy connection timed out after 5 seconds.");
+                            window.token_server_socket.send(window.generate_fail_response_packet());
+                        }, PROXY_CONNECT_TIMEOUT);
+    
+                        let proxy_listener = function(event) {
+                            if (event.source != window || !event.data) return;
+                            
+                            if (event.data.type == "PROXY_READY") {
+                                clearTimeout(timeout_id);
+                                
+                                window.removeEventListener("message", proxy_listener);
+                                console.log("Extension confirmed: Proxy is live for this window.");
+                                resolve();
+                            }
+                        };
+                        
+                        window.addEventListener("message", proxy_listener);
+    
+                        window.postMessage({
+                            type: "SET_TAB_PROXY",
+                            proxy_details: proxy,
+                            js_API_spoof_fields: window.js_API_spoof_fields
+                        }, "*");
                     });
                 }
-
-                function spawn_iframe() {
-                    count++;
-                    let f = document.createElement('iframe');
-                    f.srcdoc = `<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8"/>
-        <title>Turnstile iframe Solver</title>
-        <style>
-            #__ts_container__ {
-                position: fixed;
-                top: 0;
-                left: 0;
-                z-index: 9999;
-            }
-        </style>
-        <script type="module">
-            (function () {
-                'use strict';
-
-                let start_time = Date.now();
-                globalThis.run_time = function () {
-                    return ((Date.now() - start_time) / 1000).toFixed(3) + 's';
-                };
-
-                try { localStorage.removeItem('cached_captcha_token'); } catch (e) {}
-
-                Object.defineProperty(window, 'captcha_token', {
-                    configurable: true,
-                    get: function () { return token; },
-                    set: async function (v) {
-                        console.log("Token: " + v);
-                        console.log('[turnstile] token:', v, '| time:', run_time());
-                        let bytes = new TextEncoder().encode(v);
-                        let pkt = new Uint8Array(bytes.length + 9);
-                        // Send the token packet to the token server.
-                        pkt[0] = 0;
-                        pkt[1] = window.top.requester_id & 255;
-                        pkt[2] = (window.top.requester_id >> 8) & 255;
-                        pkt[3] = (window.top.requester_id >> 16) & 255;
-                        pkt[4] = (window.top.requester_id >> 24) & 255;
-                        pkt[5] = window.top.solver_idx & 255;
-                        pkt[6] = (window.top.solver_idx >> 8) & 255;
-                        pkt[7] = (window.top.solver_idx >> 16) & 255;
-                        pkt[8] = (window.top.solver_idx >> 24) & 255;
-                        pkt.set(bytes, 9);
-                        window.top.token_server_socket.send(pkt);
+    
+                document.addEventListener("keydown", async function (e) {
+                    if (e.code == "KeyK") {
+                        window.token_server_socket.send(window.generate_fail_response_packet());
+                        location.reload();
                     }
                 });
-
-                window.cf__reactTurnstileOnLoad = function () {
-                    let container = document.getElementById('__ts_container__');
-                    if (!container) {
-                        container = document.createElement('div');
-                        container.id = '__ts_container__';
-                        container.style.cssText = 'position:fixed;top:0;left:0;z-index:9999;';
-                        document.body.appendChild(container);
+    
+                window.token_server_socket = new WebSocket(TOKEN_SERVER_HOST);
+                token_server_socket.binaryType = "arraybuffer";
+    
+                token_server_socket.onopen = function () {
+                    token_server_socket.send(new Uint8Array([2, ...new TextEncoder().encode(navigator.userAgent)]));
+                };
+    
+                token_server_socket.onmessage = async function (e) {
+                    document.querySelectorAll('iframe').forEach(iframe => iframe.remove());
+                    let packet = new DataView(e.data);
+                    let packet_u8 = new Uint8Array(e.data);
+                    window.solver_idx = packet.getUint32(0, true);
+                    window.requester_id = packet.getUint32(4, true);
+                    window.js_API_spoof_fields = {};
+                    window.extra_cf_turnstile_render_fields = {};
+                    let ptr = 8;
+                    let decoder = new TextDecoder();
+                    while (ptr < packet_u8.length) {
+                        let field_name_length = packet_u8[ptr++];
+                        let field_name = decoder.decode(packet_u8.slice(ptr, ptr + field_name_length));
+                        ptr = ptr + field_name_length;
+                        let field_value_length = packet_u8[ptr++];
+                        let field_value = decoder.decode(packet_u8.slice(ptr, ptr + field_value_length));
+                        ptr = ptr + field_value_length;
+                        if (field_name.indexOf(".") != -1) {
+                            window.js_API_spoof_fields[field_name] = field_value;
+                        } else {
+                            window.extra_cf_turnstile_render_fields[field_name] = field_value;
+                        };
+                    };
+                    console.log("Solver idx: " + window.solver_idx);
+                    console.log("Requester id: " + window.requester_id);
+                    console.log("JavaScript API spoof fields: ", window.js_API_spoof_fields);
+                    console.log("Extra render call fields: ", window.extra_cf_turnstile_render_fields);
+                    if (USE_PROXY_SOLVING) await connect_to_proxy();
+                    start_solvers();
+                };
+    
+                let start_solvers = function () {
+                    let farm = document.getElementById('iframe-farm');
+                    let count = 0;
+    
+                    function layout() {
+                        let frames = farm.querySelectorAll('iframe');
+                        let n = frames.length;
+                        if (n == 0) return;
+    
+                        frames.forEach(function (f, i) {
+                            f.style.left = (i * 2) + 'px';
+                            f.style.top = (i * 2) + 'px';
+                            f.style.width = '350px';
+                            f.style.height = '450px';
+                        });
                     }
-
-                    container.innerHTML = '';
-
-                    let cf_turnstile_render_fields = {
-                        sitekey: window.top.sitekey,
-                        appearance: 'always',
-                        callback: function (t) {
-                            window.captcha_token = t;
-                            try { localStorage.setItem('cached_captcha_token', t); } catch (e) {}
-                        },
-                        'error-callback': function (code) {
-                            console.log('[turnstile] error:', code);
-                            window.top.token_server_socket.send(window.top.generate_fail_response_packet());
-                        },
-                        'expired-callback': function () {
-                            window.top.token_server_socket.send(window.top.generate_fail_response_packet());
+    
+                    function spawn_iframe() {
+                        count++;
+                        let f = document.createElement('iframe');
+                        f.srcdoc = `<!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="UTF-8"/>
+            <title>Turnstile iframe Solver</title>
+            <style>
+                #__ts_container__ {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    z-index: 9999;
+                }
+            </style>
+            <script type="module">
+                (function () {
+                    'use strict';
+    
+                    let start_time = Date.now();
+                    globalThis.run_time = function () {
+                        return ((Date.now() - start_time) / 1000).toFixed(3) + 's';
+                    };
+    
+                    try { localStorage.removeItem('cached_captcha_token'); } catch (e) {}
+    
+                    Object.defineProperty(window, 'captcha_token', {
+                        configurable: true,
+                        get: function () { return token; },
+                        set: async function (v) {
+                            console.log("Token: " + v);
+                            console.log('[turnstile] token:', v, '| time:', run_time());
+                            let bytes = new TextEncoder().encode(v);
+                            let pkt = new Uint8Array(bytes.length + 9);
+                            // Send the token packet to the token server.
+                            pkt[0] = 0;
+                            pkt[1] = window.top.requester_id & 255;
+                            pkt[2] = (window.top.requester_id >> 8) & 255;
+                            pkt[3] = (window.top.requester_id >> 16) & 255;
+                            pkt[4] = (window.top.requester_id >> 24) & 255;
+                            pkt[5] = window.top.solver_idx & 255;
+                            pkt[6] = (window.top.solver_idx >> 8) & 255;
+                            pkt[7] = (window.top.solver_idx >> 16) & 255;
+                            pkt[8] = (window.top.solver_idx >> 24) & 255;
+                            pkt.set(bytes, 9);
+                            window.top.token_server_socket.send(pkt);
                         }
-                    };
-
-                    for (let field in window.top.extra_cf_turnstile_render_fields) {
-                        cf_turnstile_render_fields[field] = window.top.extra_cf_turnstile_render_fields[field];
-                    };
-
-                    window.turnstile.render(container, cf_turnstile_render_fields);
-                };
-            })();
-        <\/script>
-    </head>
-    <body>
-        <script>
-            (function () {
-                function auto_reset(widget_id) {
-                    try { window.turnstile.reset(widget_id); } catch (e) {}
-                }
-
-                function patch_turnstile() {
-                    let ts = window.turnstile;
-                    if (!ts || typeof ts.render != 'function') return;
-                    let orig_render = ts.render.bind(ts);
-                    ts.render = function (container, params) {
-                        let p = params ? Object.assign({}, params) : {};
-
-                        let orig_expired = typeof p['expired-callback'] == 'function' ? p['expired-callback'] : null;
-                        p['expired-callback'] = function (widget_id) {
-                            if (orig_expired) orig_expired(widget_id);
-                            auto_reset(widget_id);
+                    });
+    
+                    window.cf__reactTurnstileOnLoad = function () {
+                        let container = document.getElementById('__ts_container__');
+                        if (!container) {
+                            container = document.createElement('div');
+                            container.id = '__ts_container__';
+                            container.style.cssText = 'position:fixed;top:0;left:0;z-index:9999;';
+                            document.body.appendChild(container);
+                        }
+    
+                        container.innerHTML = '';
+    
+                        let cf_turnstile_render_fields = {
+                            sitekey: window.top.sitekey,
+                            appearance: 'always',
+                            callback: function (t) {
+                                window.captcha_token = t;
+                                try { localStorage.setItem('cached_captcha_token', t); } catch (e) {}
+                            },
+                            'error-callback': function (code) {
+                                console.log('[turnstile] error:', code);
+                                window.top.token_server_socket.send(window.top.generate_fail_response_packet());
+                            },
+                            'expired-callback': function () {
+                                window.top.token_server_socket.send(window.top.generate_fail_response_packet());
+                            }
                         };
-
-                        let orig_error = typeof p['error-callback'] == 'function' ? p['error-callback'] : null;
-                        p['error-callback'] = function (code) {
-                            if (orig_error) orig_error(code);
-                            let saved_container = container;
-                            setTimeout(function () { auto_reset(saved_container); }, 2000);
+    
+                        for (let field in window.top.extra_cf_turnstile_render_fields) {
+                            cf_turnstile_render_fields[field] = window.top.extra_cf_turnstile_render_fields[field];
                         };
-
-                        return orig_render(container, p);
+    
+                        window.turnstile.render(container, cf_turnstile_render_fields);
                     };
+                })();
+            <\/script>
+        </head>
+        <body>
+            <script>
+                (function () {
+                    function auto_reset(widget_id) {
+                        try { window.turnstile.reset(widget_id); } catch (e) {}
+                    }
+    
+                    function patch_turnstile() {
+                        let ts = window.turnstile;
+                        if (!ts || typeof ts.render != 'function') return;
+                        let orig_render = ts.render.bind(ts);
+                        ts.render = function (container, params) {
+                            let p = params ? Object.assign({}, params) : {};
+    
+                            let orig_expired = typeof p['expired-callback'] == 'function' ? p['expired-callback'] : null;
+                            p['expired-callback'] = function (widget_id) {
+                                if (orig_expired) orig_expired(widget_id);
+                                auto_reset(widget_id);
+                            };
+    
+                            let orig_error = typeof p['error-callback'] == 'function' ? p['error-callback'] : null;
+                            p['error-callback'] = function (code) {
+                                if (orig_error) orig_error(code);
+                                let saved_container = container;
+                                setTimeout(function () { auto_reset(saved_container); }, 2000);
+                            };
+    
+                            return orig_render(container, p);
+                        };
+                    }
+    
+                    let prev_on_load = window.cf__reactTurnstileOnLoad;
+                    window.cf__reactTurnstileOnLoad = function () {
+                        patch_turnstile();
+                        if (typeof prev_on_load == 'function') prev_on_load();
+                    };
+                })();
+            <\/script>
+            <script
+                src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=cf__reactTurnstileOnLoad"
+                async
+                defer="defer"
+            ><\/script>
+        </body>
+    </html>`;
+                        f.title = 'Instance ' + count;
+                        farm.appendChild(f);
+                        layout();
+                        setTimeout(layout, 0);
+                        console.log('[farm] spawned iframe #' + count);
+                    }
+    
+                    for (let i = 0; i < PRELOAD_IFRAMES; i += 1) spawn_iframe();
+    
+                    window.addEventListener('resize', layout);
                 }
-
-                let prev_on_load = window.cf__reactTurnstileOnLoad;
-                window.cf__reactTurnstileOnLoad = function () {
-                    patch_turnstile();
-                    if (typeof prev_on_load == 'function') prev_on_load();
-                };
             })();
-        <\/script>
-        <script
-            src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=cf__reactTurnstileOnLoad"
-            async
-            defer="defer"
-        ><\/script>
-    </body>
-</html>`;
-                    f.title = 'Instance ' + count;
-                    farm.appendChild(f);
-                    layout();
-                    setTimeout(layout, 0);
-                    console.log('[farm] spawned iframe #' + count);
-                }
-
-                for (let i = 0; i < PRELOAD_IFRAMES; i += 1) spawn_iframe();
-
-                window.addEventListener('resize', layout);
-            }
-        })();
+        }, 1000); 
     </script>
 </body>
 </html>
