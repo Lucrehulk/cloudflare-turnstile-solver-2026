@@ -44,6 +44,14 @@ pub struct Rect {
     pub height: u32,
 }
 
+// Pair a detected checkbox rect with its screen's DPI scale factor so click
+// coordinates can be converted from image pixels to logical screen coordinates.
+#[derive(Debug, Clone)]
+pub struct ScaledRect {
+    pub rect: Rect,
+    pub scale: f32,
+}
+
 fn main() {
     let active = Arc::new(AtomicBool::new(false));
     let active_clone = Arc::clone(&active);
@@ -73,16 +81,17 @@ fn main() {
         let queue = detect_checkboxes();
         println!("Detected {} checkbox(es)", queue.len());
 
-        for rect in &queue {
+        for scaled in &queue {
             // If active is false, the toggle will just stop us from clicking anything--but it'll still keep detecting checkboxes.
             if !active.load(Ordering::SeqCst) { break };
 
-            // Set random click points and click.
+            // Divide image pixel coordinates by the DPI scale factor to convert them into
+            // the logical screen coordinates that enigo expects.
             let mut rand = rand::thread_rng();
-            let click_x = rect.x + (rect.width as f32 * rand.gen::<f32>()) as u32;
-            let click_y = rect.y + (rect.height as f32 * rand.gen::<f32>()) as u32;
+            let click_x = ((scaled.rect.x as f32 + scaled.rect.width as f32 * rand.gen::<f32>()) / scaled.scale) as i32;
+            let click_y = ((scaled.rect.y as f32 + scaled.rect.height as f32 * rand.gen::<f32>()) / scaled.scale) as i32;
 
-            enigo.move_mouse(click_x as i32, click_y as i32, Coordinate::Abs).expect("move_mouse failed");
+            enigo.move_mouse(click_x, click_y, Coordinate::Abs).expect("move_mouse failed");
             enigo.button(Button::Left, enigo::Direction::Click).expect("click failed");
 
             thread::sleep(Duration::from_millis(50));
@@ -92,7 +101,7 @@ fn main() {
     }
 }
 
-pub fn detect_checkboxes() -> VecDeque<Rect> {
+pub fn detect_checkboxes() -> VecDeque<ScaledRect> {
     let mut queue = VecDeque::new();
 
     let screens = match Screen::all() {
@@ -101,6 +110,10 @@ pub fn detect_checkboxes() -> VecDeque<Rect> {
     };
 
     for screen in screens {
+        // Read the screen's DPI scale factor before capturing so we can attach
+        // it to every rect found on this screen.
+        let scale = screen.display_info.scale_factor;
+
         let image = match screen.capture() {
             Ok(img) => img,
             Err(e) => { eprintln!("capture failed: {e}"); continue },
@@ -131,7 +144,8 @@ pub fn detect_checkboxes() -> VecDeque<Rect> {
                 let area = interior.width * interior.height;
                 if area < MIN_INTERIOR_AREA || area > MAX_INTERIOR_AREA { continue };
 
-                queue.push_back(interior);
+                // Wrap the rect and its screen scale factor together before queuing.
+                queue.push_back(ScaledRect { rect: interior, scale });
             }
         }
     }
