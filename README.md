@@ -269,7 +269,7 @@ Windows OS uses the "handle to window" (HWND) mechanism to identify different wi
 
 **Note this is currently only designed for Windows. Not going to add implementation for other operating systems myself, but pull requests are welcome.**
 
-**Also note, though this component does automatically launch and position the browsers, for some certain browsers (like Google Chrome) the custom profile login currently does not work, and you have to log in with your own profile. It works better on browsers like Edge where this does work.**
+**Also note, though this component does automatically launch and position the browsers, for some certain browsers (like Google Chrome) the custom profile login currently does not work, and you have to log in with your own profile. It works better on browsers like Edge where this does work. Additionally, if launching browsers under this component causes any sort of issue, you can still just manually load your own browsers with the proxy extension on them to run this solver. This has just been added as an attempt for convenience.**
 
 This component introduces automatic browser detection and launching. It has two key binaries: main.rs, and find_browsers.rs. An explanation for each--and the arguments to pass--is provided below. 
 
