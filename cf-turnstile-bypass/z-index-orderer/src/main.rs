@@ -21,7 +21,7 @@ use windows::Win32::{
     Foundation::{BOOL, HWND, LPARAM},
     UI::{
         WindowsAndMessaging::{
-            EnumWindows, GetWindowTextLengthW, IsIconic, IsWindowVisible,
+            EnumWindows, GetWindowTextLengthW, IsIconic, IsWindow, IsWindowVisible,
             SetWindowPos, HWND_TOP, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOSENDCHANGING,
         },
     },
@@ -76,7 +76,7 @@ fn snapshot_visible() -> Vec<SendHwnd> {
 // which is why we take the previous entry.
 // We iterate forward (top-to-bottom) so sorted[0] locks to HWND_TOP first,
 // and windows after go below. This makes it so, if a clicked browser reaches the top
-// index, it simply ends uo being placed back to where it needs to go.
+// index, it simply ends up being placed back to where it needs to go.
 unsafe fn enforce_order(sorted: &[TrackedWindow]) {
     for i in 0..sorted.len() {
         let win = &sorted[i];
@@ -199,6 +199,8 @@ fn main() {
 
         // Sort by insertion_order in ascending order.
         list.sort_by_key(|w| w.insertion_order);
-        list.retain(|w| unsafe { IsWindowVisible(w.hwnd.0).as_bool() });
+        // Only drop a window from tracking when its HWND is fully destroyed.
+        // which IsWindow allows us to check.
+        list.retain(|w| unsafe { IsWindow(w.hwnd.0).as_bool() });
     }
 }
