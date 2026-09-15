@@ -95,6 +95,8 @@ unsafe fn enforce_order(sorted: &[TrackedWindow]) {
 }
 
 fn main() {
+    println!("Press F7 to de-activate the new window checker loop, and press F9 to enable the Z-order enforcement loop.");
+
     // We store pre-existing windows and use this as a reference list of handles.
     let pre_existing: HashSet<isize> = snapshot_visible()
         .into_iter()
