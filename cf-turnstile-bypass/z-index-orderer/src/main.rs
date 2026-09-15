@@ -72,10 +72,13 @@ fn snapshot_visible() -> Vec<SendHwnd> {
 
 // Sort z-index for each window so that it is below the z-index of the current (or z_prev + 1).
 // We specifically insert it after it's predecessor.
-// The setWindowPos method allows us to set the window position for a certain hwnd based on where we can to place it *after*, 
-// which is why we take the previous entry. 
+// The SetWindowPos method allows us to set the window position for a certain hwnd based on where we want to place it *after*,
+// which is why we take the previous entry.
+// We iterate forward (top-to-bottom) so sorted[0] locks to HWND_TOP first,
+// and windows after go below. This makes it so, if a clicked browser reaches the top
+// index, it simply ends uo being placed back to where it needs to go.
 unsafe fn enforce_order(sorted: &[TrackedWindow]) {
-    for i in (0..sorted.len()).rev() {
+    for i in 0..sorted.len() {
         let win = &sorted[i];
         if !IsWindowVisible(win.hwnd.0).as_bool() {
             continue;
