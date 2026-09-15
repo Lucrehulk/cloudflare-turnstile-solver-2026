@@ -204,6 +204,13 @@ async fn handle_connection(stream: TcpStream, state: Arc<Mutex<State>>) {
                 let _ = tx.send(Message::Binary(response_packet));
             }
 
+            // Ping to keep connection alive.
+            // [255].
+            255 => {
+                // Do nothing. It appears browsers just may close inactive socket connections, so I added this ping
+                // as an attempt to keep it alive.
+            }
+
             _ => {
                 eprintln!("Unknown header byte: {} from socket {}.", header, id);
             }
