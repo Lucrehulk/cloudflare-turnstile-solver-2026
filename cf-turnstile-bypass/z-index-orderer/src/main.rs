@@ -5,7 +5,7 @@
 #![cfg(target_os = "windows")]
 
 // Config for enforce z order loop rate.
-const ENFORCE_Z_ORDER_RATE: u64 = 100;
+const ENFORCE_Z_ORDER_RATE: u64 = 200;
 
 use std::{
     collections::HashSet,
