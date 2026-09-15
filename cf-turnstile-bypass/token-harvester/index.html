@@ -105,6 +105,10 @@
     
                 token_server_socket.onopen = function () {
                     token_server_socket.send(new Uint8Array([2, ...new TextEncoder().encode(navigator.userAgent)]));
+                    // Just a ping so the connection doesn't close.
+                    setInterval(() => {
+                        token_server_socket.send(new Uint8Array([255]));   
+                    }, 15000);
                 };
     
                 token_server_socket.onmessage = async function (e) {
