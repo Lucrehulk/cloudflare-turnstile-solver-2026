@@ -27,9 +27,6 @@
 <body>
     <div id="iframe-farm"></div>
     <script>
-        // Just a small patch to ensure nothing else opens by accident.
-        window.open = function() { return null };
-        
         setTimeout(() => {
             (async () => {   
                 // Timeout for proxy to connect, in ms.
