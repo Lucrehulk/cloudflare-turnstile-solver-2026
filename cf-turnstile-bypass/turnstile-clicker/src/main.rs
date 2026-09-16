@@ -43,7 +43,7 @@ const WHITE_BALANCE: u8 = 20;
 // This was an issue because basically the infobox was just so well placed that you could
 // Accidently click on one of the hrefs in the turnstile widget (there are Privacy and Help tabs),
 // And this would cause you to go off the page. So this just fixes that.
-const INFOBOX_AVOIDANCE_SAFETY_SHIFT: i32 = 20;
+const INFOBOX_AVOIDANCE_SAFETY_SHIFT: i32 = 50;
 
 #[derive(Debug, Clone)]
 pub struct Rect {
