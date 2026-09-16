@@ -35,6 +35,15 @@ const WHITE_TARGET: u8 = 255;
 const WHITE_TOLERANCE: u8 = 25;
 // White balance.
 const WHITE_BALANCE: u8 = 20;
+// This infobox safety avoideance shift is a hacky solution I came up to fix an issue.
+// Basically, when the verifying buffer on the turnstile widget is active, it can activate
+// one of those html infoboxes for the element, which is actually detected by the checkbox clicker.
+// To deal with this, I just made it so you can shift your mouse below a certain amount so that 
+// the infobox doesbn't trigger. That's all this is.
+// This was an issue because basically the infobox was just so well placed that you could
+// Accidently click on one of the hrefs in the turnstile widget (there are Privacy and Help tabs),
+// And this would cause you to go off the page. So this just fixes that.
+const INFOBOX_AVOIDANCE_SAFETY_SHIFT: i32 = 20;
 
 #[derive(Debug, Clone)]
 pub struct Rect {
@@ -93,6 +102,7 @@ fn main() {
 
             enigo.move_mouse(click_x, click_y, Coordinate::Abs).expect("move_mouse failed");
             enigo.button(Button::Left, enigo::Direction::Click).expect("click failed");
+            enigo.move_mouse(click_x, click_y + INFOBOX_AVOIDANCE_SAFETY_SHIFT, Coordinate::Abs).expect("move_mouse failed");
 
             thread::sleep(Duration::from_millis(50));
         }
