@@ -8,6 +8,8 @@ Still may be subject to change. Do note I am now in college so I have a lot of t
 
 Top Priority: Rewrite proxies mechanism so you directly pass in the proxy to the solver instead of a solver idx. 
 
+Expected time of completion: This weekend.
+
 ---
 
 ### Pros
