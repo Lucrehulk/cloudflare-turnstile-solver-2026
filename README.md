@@ -48,7 +48,9 @@ Benchmarking turnstile solves is difficult. Output will absolutely vary dependin
 
 In my own use cases, I've used this on high traffic WebSocket servers for webgames that are protected and gated via Cloudflare turnstile. depending on the amount of stress the server was already under, with approximately 10-15 active solvers (used varying numbers, on my 8core 16GB device), I managed to achieve rates varying between 70 solves/min - 120 solves/min. This was in realistic cases on servers with substantial traffic and load already applied to them. Not some idealized benchmark. Obviously, higher server load resulted in a lower solve rate, whereas if the server was less under stress at a given time it had a higher solve rate. 
 
-As for just general form gating (not gating to a high traffic WebSocket server) the performance would be even more efficient than this. You should expect solve rates closer to and possibly above the 120 solves/min rate, as the game WebSocket servers have to spend a vast amount of time handling other loads. Essentially, this benchmark is quite conservative and only uses values from **real application instances** I've performed myself. Especially if you're dealing with something along the lines of simple HTTP requests being gated by turnstile, rather than high-traffic WS servers, these values should be taken as lower end numbers. 
+As for just general form gating (not gating to a high traffic WebSocket server) the performance would be even more efficient than this. You should expect solve rates closer to and possibly above the 120 solves/min rate, as the game WebSocket servers have to spend a vast amount of time handling other loads--simple HTTP forms do not have nearly as much stress. 
+
+Essentially, this general benchmark is quite conservative and only uses values from **real application instances** I've performed myself. Especially if you're dealing with something along the lines of simple HTTP requests being gated by turnstile, rather than high-traffic WS servers, these values should be taken as lower end numbers. 
 
 ---
 
