@@ -36,7 +36,6 @@ Still may be subject to change. Do note I am now in college so I have a lot of t
 
 | Minor |
 | :--- |
-| The method relies on a browser with overrides enabled. |
 | Designed for smaller-scale token harvesting, though the token server architecture does support larger-scale operations. |
 | Tunneling multiple proxies through each iframe is not supported. Do note this may potentially be added in the future if a feasible solution (some form of advanced tunneling) is found. Note that per-window proxying, however, is supported. |
 
