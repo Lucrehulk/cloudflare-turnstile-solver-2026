@@ -124,7 +124,7 @@ async fn handle_connection(stream: TcpStream, state: Arc<Mutex<State>>) {
                 let mut s = state.lock().await;
                 
                 // Select a target solver id.
-                // If the ua_len is 0, no ua was specified. It'll select a solver from a random ua bucket (next in the iter).
+                // If the ua_len is 0, no ua was specified. It'll select a solver from the next iter call for an unbiased selection.
                 // If the ua was specified, it'll pick a solver from that bucket.
                 let solver_opt = if ua_len == 0 {
                     s.available_solvers_queue.iter()
