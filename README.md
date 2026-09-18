@@ -185,8 +185,6 @@ Set the `PORT` value in config. That's all.
 | Solver | Solve Request | Solve a turnstile widget request that is delivered to a solver. Field data is parsed and does whatever is necessary (`API.key` -> JavaScript API is spoofed with the given field value, `key` -> turnstile render call adds this field).<br><br>**Structure:** `<1, proxy_url_len (u8), ...proxy_url_bytes, ...requester_id_bytes (u32), ...(field_name_len (u8), ...field_name_bytes, field_value_len (u8), ...field_value_bytes)>` |
 | Receiver | Available Solvers Result | The result to the available solvers count request you made.<br><br>**Structure:** `<3, ...available_solvers_bytes (u32)>` |
 
-> **Note:** Clientbound packets are distinguished by their header byte. Receivers parse header `0` as a token result, `2` as solvers unavailable, and `3` as the available solvers count. The solver parses header `1` as a solve request.
-
 **How it works:**
 
 The architecture for the specific protocol of the server is above. The server assigns an ID to every socket, allows solvers to register themselves, for which it stores into available solver buckets (HashSets accessed by an outer HashMap that uses the respective user-agents as keys, meaning you can refer to solvers with specific user-agents only). Receivers can then simply send packets to the server to request solves from solvers, which if the solvers are available the server will forward. The solvers will send the solve results to the server, which will then forward it back to the original requester, which it does by bouncing around the original `requester_id` within these packets.
