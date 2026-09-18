@@ -1,8 +1,8 @@
 // Paths config for this background script to read files from, for proxies and our override script.
 
-const OVERRIDE_FILE_PATH = String.raw`C:\Users\will_\Downloads\resources (2)\elitest crashr\cloudflare-turnstile-solver-2026-main\cf-turnstile-bypass\token-harvester\index.html`;
+const OVERRIDE_FILE_PATH = String.raw``;
 
-const INJECT_CONFIG_FILE_PATH = String.raw`C:\Users\will_\Downloads\resources (2)\elitest crashr\cloudflare-turnstile-solver-2026-main\cf-turnstile-bypass\proxy-extensions\inject_config.txt`;
+const INJECT_CONFIG_FILE_PATH = String.raw``;
 
 // Object map for proxy ID info.
 let active_proxy = null;
