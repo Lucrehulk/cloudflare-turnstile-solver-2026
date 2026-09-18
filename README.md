@@ -33,11 +33,22 @@ Still may be subject to change. Do note I am now in college so I have a lot of t
 | Ineffective for general, random web-scraping. Knowing the websites it will be used on is most effective. |
 | No custom fingerprint spoofing for TLS/JA4, canvas, and other metrics like navigator values. But, given the legitimacy of the browsers, this isn't as severe as usual. |
 | Still a decent chunk of initial manual setup required. The automation of the harvester itself though is good. |
+| Initial setup is more complex compared to other solvers. |
 
 | Minor |
 | :--- |
 | Designed for smaller-scale token harvesting, though the token server architecture does support larger-scale operations. |
 | Tunneling multiple proxies through each iframe is not supported. Do note this may potentially be added in the future if a feasible solution (some form of advanced tunneling) is found. Note that per-window proxying, however, is supported. |
+
+---
+
+## Performance?
+
+Benchmarking turnstile solves is difficult. Output will absolutely vary depending on the site. However, I have used this method for my own personal endeavors, and these were rates I found for **realistic** (this was actually applied and used in real application, not as some standard benchmark where the numbers are made optimal) scenarios. 
+
+In my own use cases, I've used this on high traffic WebSocket servers for webgames that are protected and gated via Cloudflare turnstile. depending on the amount of stress the server was already under, with approximately 10-15 active solvers (used varying numbers, on my 8core 16GB device), I managed to achieve rates varying between 70 solves/min - 120 solves/min. This was in realistic cases on servers with substantial traffic and load already applied to them. Not some idealized benchmark. Obviously, higher server load resulted in a lower solve rate, whereas if the server was less under stress at a given time it had a higher solve rate. 
+
+As for just general form gating (not gating to a high traffic WebSocket server) the performance would be even more efficient than this. You should expect solve rates closer to and possibly above the 120 solves/min rate, as the game WebSocket servers have to spend a vast amount of time handling other loads. Essentially, this benchmark is quite conservative and only uses values from **real application instances** I've performed myself. Especially if you're dealing with something along the lines of simple HTTP requests being gated by turnstile, rather than high-traffic WS servers, these values should be taken as lower end numbers. 
 
 ---
 
