@@ -86,7 +86,7 @@ This requires the maximization of two metrics:
 This project effectively minimizes the latency, or time for a single solver to solve the token. A few things contribute to this fact:
 - Because the method is single site harvesting, no page redirect, or entirely new page loading is required.
 - The override token solver file strips away unnecessary html elements. You are left with a black background and the widget in in iframe.
-- Real browser fingerprints result in short challenges that take only seconds to go through. The time for a Cloudflare Turnstile challenge to go through takes only a few seconds at most. In general, you'll see results of even under two seconds.
+- Real browser fingerprints result in short challenges that take only seconds to go through. The time for a Cloudflare Turnstile challenge to go through takes only a few seconds at most. In general, you'll see results of even under two seconds (though usually around 2-4s).
 - Pipeline of token transfer through solver -> token server -> receiver/backend is extremely fast.
 - Vice versa, pipeline of request to solve through receiver -> token server -> solver is also extremely fast.
 - Effectively, the approximate latency for a single solver to get a token to a receiver is:
