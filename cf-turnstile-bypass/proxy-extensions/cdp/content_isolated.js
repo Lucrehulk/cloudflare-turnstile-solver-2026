@@ -11,13 +11,9 @@
             return;
         }
 
-        if (payload && payload.inject_config != null && payload.proxies != null) {
+        if (payload && payload.inject_config != null) {
             window.postMessage({ type: "SET_LOCALSTORAGE_INJECT", payload }, "*");
             return;
-        }
-
-        if (payload && (payload.inject_config != null || payload.proxies != null)) {
-            window.postMessage({ type: "SET_LOCALSTORAGE_INJECT", payload }, "*");
         }
 
         if (attempt < MAX_RETRIES) {

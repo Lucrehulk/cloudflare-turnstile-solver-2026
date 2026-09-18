@@ -1,5 +1,4 @@
 let _inject_config_written = false;
-let _proxies_written = false;
 
 // Native toString spoof helper.
 let native_to_string = function toString() {
@@ -41,10 +40,6 @@ window.addEventListener("message", (event) => {
                 });
             }
 
-            if (payload.proxies != null && !_proxies_written) {
-                _proxies_written = true;
-                localStorage.proxies = payload.proxies;
-            }
         } catch (e) {}
         return;
     }

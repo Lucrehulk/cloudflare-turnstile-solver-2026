@@ -6,10 +6,6 @@ A proof-of-concept Cloudflare Turnstile bypass system built with Rust and JavaSc
 
 Still may be subject to change. Do note I am now in college so I have a lot of things I am doing, but this is a pretty important project so I may update it more (also may not).
 
-Top Priority: Rewrite proxies mechanism so you directly pass in the proxy to the solver instead of a solver idx. 
-
-Expected time of completion: This weekend.
-
 ---
 
 ### Pros
@@ -174,8 +170,8 @@ Set the `PORT` value in config. That's all.
 
 | Sent From | Header | Description |
 |-----------|--------|-------------|
-| Solver | `0` | Incoming token result from a solver. The server routes it back to the specific requester who asked for it by extracting the requester ID, then re-adds the solver to the available queue.<br><br>**Structure:** `<0, ...requester_id_bytes (u32), ...solver_idx_bytes (u32), ...token_bytes>`<br>*Note: If the solver failed to get a token, then there are no token bytes.* |
-| Receiver | `1` | On-demand solve request from a requester. The server pulls the next available solver from the queue and forwards this assignment to them.<br><br>**User-Agent Routing:** You can specify a specific user-agent in this packet, which will then make the token server force a solver with that user-agent. This is particularly useful for mimicking real web traffic, and distributing solves across an amount that mimics the real web traffic distribution of user-agents. You can also just leave user-agent as `""` for a random selection.<br><br>**Field Spoofing:** The `fields` data allows you to implement JS field spoofs for a few things:<br>• **JS APIs:** You can spoof JS APIs like navigator properties and window dimensions by specifying `navigator.property`, `window.property`, etc. You can spoof with whatever JS properties you'd like basically. Window/viewport dimensions, navigator properties, etc. are all great properties you can spoof. However, so as to not confuse it with another field type (the next we will talk about), your JS field spoofs should refer to names in the structure of `API.key`. Nested references, like `API.key.key`, are also fine. For your field values, though obviously for the protocol they must be passed in as string data, if the values are directly castable to other primitive types (number, boolean), they will be automatically converted to such by the solvers for their logic. Otherwise, if not directly convertable to said types, they will be kept as strings.<br>• **Render Calls:** The `turnstile.render` function call, which initializes the widget, can take in special fields and extra data, such as `action`, or `cData`. To counter this, you may also specify field data for these in this packet. To specify field data for this, simply make the field name data you pass in the form of `key`. This contrasts from the `API.key` structure of the first case, and the system will know you are referring to a custom render call field. These fields will then be passed into the render call the solver makes.<br><br>**Structure:** `<1, ...solver_idx_bytes (u32), user_agent_len (u8), ...user_agent_bytes ...(field_name_len (u8), ...field_name_bytes, field_value_len (u8), ...field_value_bytes)>` |
+| Solver | `0` | Incoming token result from a solver. The server routes it back to the specific requester who asked for it by extracting the requester ID, then re-adds the solver to the available queue.<br><br>**Structure:** `<0, ...requester_id_bytes (u32), proxy_url_len (u8), ...proxy_url_bytes, ...token_bytes>`<br>*Note: If the solver failed to get a token, then there are no token bytes.* |
+| Receiver | `1` | On-demand solve request from a requester. The server pulls the next available solver from the queue and forwards this assignment to them.<br><br>**User-Agent Routing:** You can specify a specific user-agent in this packet, which will then make the token server force a solver with that user-agent. This is particularly useful for mimicking real web traffic, and distributing solves across an amount that mimics the real web traffic distribution of user-agents. You can also just leave user-agent as `""` for a random selection.<br><br>**Field Spoofing:** The `fields` data allows you to implement JS field spoofs for a few things:<br>• **JS APIs:** You can spoof JS APIs like navigator properties and window dimensions by specifying `navigator.property`, `window.property`, etc. You can spoof with whatever JS properties you'd like basically. Window/viewport dimensions, navigator properties, etc. are all great properties you can spoof. However, so as to not confuse it with another field type (the next we will talk about), your JS field spoofs should refer to names in the structure of `API.key`. Nested references, like `API.key.key`, are also fine. For your field values, though obviously for the protocol they must be passed in as string data, if the values are directly castable to other primitive types (number, boolean), they will be automatically converted to such by the solvers for their logic. Otherwise, if not directly convertable to said types, they will be kept as strings.<br>• **Render Calls:** The `turnstile.render` function call, which initializes the widget, can take in special fields and extra data, such as `action`, or `cData`. To counter this, you may also specify field data for these in this packet. To specify field data for this, simply make the field name data you pass in the form of `key`. This contrasts from the `API.key` structure of the first case, and the system will know you are referring to a custom render call field. These fields will then be passed into the render call the solver makes.<br><br>**Structure:** `<1, proxy_url_len (u8), ...proxy_url_bytes, user_agent_len (u8), ...user_agent_bytes, ...(field_name_len (u8), ...field_name_bytes, field_value_len (u8), ...field_value_bytes)>` |
 | Solver | `2` | Register the sending socket as a solver. The server appends its socket ID to the available solvers queue.<br><br>**Queue Buckets:** It appends the socket ID to the solver queue bucket that matches the specified user-agent provided by the solver. If a bucket/HashSet for such does not exist yet, then it is created and the solver's socket ID is added to it. A user-agent can be referred to by the receiver when making requests, which will force only a solver with the matching user-agent to solve the request.<br><br>**Structure:** `<2, ...user_agent_bytes>` |
 | Receiver | `3` | Request the total available solvers count. Good for analyzing how many active solving instances you can spawn.<br><br>**Structure:** `<3>` |
 | Solver | `255` | Just a dummy ping packet. I've encountered issues with socket connections being closed, which is seemingly from inactivity. So solvers occasionally send this (every 15s as of now) just to keep the connection alive so the browser doesn't close it.<br><br>**Structure:** `<255>` |
@@ -184,12 +180,12 @@ Set the `PORT` value in config. That's all.
 
 | Endpoint | Name | Description |
 |----------|------|-------------|
-| Receiver | Token | Incoming token delivered to a requester.<br><br>**Structure:** `<...solver_idx_bytes (u32), ...token_bytes>`<br>*Note: If the solver failed to get a token, then there are no token bytes.* |
-| Receiver | Solvers Unavailable | A request made by a solver could not be completed because no solvers were available to accept it.<br><br>**Structure:** `<0>` |
-| Solver | Solve Request | Solve a turnstile widget request that is delivered to a solver. Field data is parsed and does whatever is necessary (`API.key` -> JavaScript API is spoofed with the given field value, `key` -> turnstile render call adds this field).<br><br>**Structure:** `<...solver_idx_bytes (u32), ...requester_id_bytes (u32), ...(field_name_len (u8), ...field_name_bytes, field_value_len (u8), ...field_value_bytes)>` |
-| Receiver | Available Solvers Result | The result to the available solvers count request you made.<br><br>**Length Collision Fix:** Note, the zero at the end of this packet is dummy data. It is actually added because I made the accepted parsing system for these packets length-based to check packet type, but the token packet will deliver 4 bytes if it fails to receive a token. I added the extra byte to this packet to solve the length collision because no branching logic is required for this one, and it's a much smaller and simpler case so I just preferred it.<br><br>**Structure:** `<...available_solvers_bytes (u32), 0>` |
+| Receiver | Token | Incoming token delivered to a requester.<br><br>**Structure:** `<0, proxy_url_len (u8), ...proxy_url_bytes, ...token_bytes>`<br>*Note: If the solver failed to get a token, then there are no token bytes.* |
+| Receiver | Solvers Unavailable | A request made by a solver could not be completed because no solvers were available to accept it.<br><br>**Structure:** `<2>` |
+| Solver | Solve Request | Solve a turnstile widget request that is delivered to a solver. Field data is parsed and does whatever is necessary (`API.key` -> JavaScript API is spoofed with the given field value, `key` -> turnstile render call adds this field).<br><br>**Structure:** `<1, proxy_url_len (u8), ...proxy_url_bytes, ...requester_id_bytes (u32), ...(field_name_len (u8), ...field_name_bytes, field_value_len (u8), ...field_value_bytes)>` |
+| Receiver | Available Solvers Result | The result to the available solvers count request you made.<br><br>**Structure:** `<3, ...available_solvers_bytes (u32)>` |
 
-> **Note:** The clientbound packets do not have headers since each endpoint receives few, easily discernible packets. Receivers receive a packet of only length 1 (Solvers Unavailable), the token packet itself (can be length 4 if there is no token and the request failed), or a packet of length 5 (total available solvers). This makes discerning packets by length easy. The solver can only receive a solve request.
+> **Note:** Clientbound packets are distinguished by their header byte. Receivers parse header `0` as a token result, `2` as solvers unavailable, and `3` as the available solvers count. The solver parses header `1` as a solve request.
 
 **How it works:**
 
@@ -206,7 +202,7 @@ For each browser you'll be using, you'll need to add the respective extension fo
 **Setup:**
 
 1. **Set your file paths**
-   Set PROXIES_LIST_PATH, OVERRIDE_FILE_PATH, and INJECT_CONFIG_FILE_PATH in `background.js`. Names are self explanatory. Note the proxy list should be a linesplit list of proxies following the expected format discussed earlier in this readme.
+   Set OVERRIDE_FILE_PATH and INJECT_CONFIG_FILE_PATH in `background.js`. Names are self explanatory.
 
 2. **Set inject config**
    Set SITEKEY, PROXY_CONNECT_TIMEOUT, USE_PROXY_SOLVING, and TOKEN_SERVER_HOST in your text config. A file with example values is provided in the `proxy-extensions` directory. These names should also be self explanatory. These values are injected as `localStorage` values into your page, and your harvester `index.html` reads and uses them. 
@@ -218,7 +214,7 @@ Then just load the extension of course.
 Each extension acts as a bridge for proxy routing and fingerprint spoofing, driven by `window.postMessage` events. The execution flow follows something like this:
 
 0. **Page Injections and Debugger Injections**
-   localStorage config edits are immediately injected upon page load. File paths for proxies and the override are now read by the extension too and th e file contents can be parsed. Additionally, the extension can attach cdp debuggers to any site (except for privileged chrome:// pages of course), and these debuggers can listen for outgoing web requests, and check if the info for the webrequest that went out matches the site we are currently on, and if it does it returns the override script back instead of the actual site page. 
+   localStorage config edits are immediately injected upon page load. Additionally, the extension can attach cdp debuggers to any site (except for privileged chrome:// pages of course), and these debuggers can listen for outgoing web requests, and check if the info for the webrequest that went out matches the site we are currently on, and if it does it returns the override script back instead of the actual site page. 
 
 1. **Initialization**
    The extension listens for a `SET_TAB_PROXY` message sent by the client (which our solvers use). This payload contains the target proxy details and the specific JavaScript field data you want to spoof. *(Note: See the token server section for details on structuring this field data).*
@@ -321,8 +317,6 @@ find_browsers is relatively simple. It simply already has the table of browser d
 
 Your backend that actually gets and requests solves for tokens will need to interact with the token server. 
 
-You will need a reference to a proxies txt list. This list should match the one you set at localStorage.proxies on the solver page.
-
 For any turnstile render call custom fields, such as "cData" or "action" as previously mentioned, you'll need to figure out how they are generated for your target, and recreate the logic to how these fields are generated so that you can pass them into your solve request packet. "action" is usually a hardcoded string, but "cData" is often used as an individual ID/verification field. In short, ensure all fields of the turnstile render call match.
 
 For any JavaScript API fields you'd like to spoof, you'll also need to send that data into the fields arguments of the construct_solver_request_packet. Details on how to structure the fields data is provided in previous sections (see token server section).
@@ -330,19 +324,15 @@ For any JavaScript API fields you'd like to spoof, you'll also need to send that
 **Construct solve request packet:**
 
 ```javascript
-// proxy_idx = literally just the index of your proxy in the proxy list.
+// proxy_url = the full proxy URL string (e.g. "http://user:pass@host:port").
 // user_agent = user-agent string of the target you want to run (matches to navigator.userAgent). 
 // fields = object, { name: value, name2: value2, ... namen: valuen }. Names and values are strings.
-function construct_solver_request_packet(proxy_idx, user_agent = "", fields = {}) {
+function construct_solver_request_packet(proxy_url, user_agent = "", fields = {}) {
    let encoder = new TextEncoder();
-   let packet = Array(5);
-   packet[0] = 1;
-   packet[1] = proxy_idx & 255;
-   packet[2] = (proxy_idx >> 8) & 255;
-   packet[3] = (proxy_idx >> 16) & 255;
-   packet[4] = (proxy_idx >> 24) & 255;
+   let proxy_url_bytes = encoder.encode(proxy_url);
+   let packet = [1, proxy_url_bytes.length, ...proxy_url_bytes];
    let user_agent_bytes = encoder.encode(user_agent);
-   packet[5] = user_agent_bytes.length;
+   packet.push(user_agent_bytes.length);
    packet.push(...user_agent_bytes);
    for (let field_name in fields) {
          let field_value = fields[field_name];
@@ -364,14 +354,14 @@ function construct_solver_request_packet(proxy_idx, user_agent = "", fields = {}
 ```javascript
 // packet = packet buffer.
 function parse_token_response_packet(packet) {
-    let view = new DataView(packet);
-    let solver_idx = view.getUint32(0, true);
+    let u8 = new Uint8Array(packet);
+    let proxy_url_len = u8[1];
+    let proxy_url = new TextDecoder().decode(u8.slice(2, 2 + proxy_url_len));
     let token = undefined;
-    if (packet.length > 4) {
-      let u8 = new Uint8Array(packet);
-      token = new TextDecoder().decode(u8.subarray(4));
+    if (u8.length > 2 + proxy_url_len) {
+        token = new TextDecoder().decode(u8.subarray(2 + proxy_url_len));
     }
-    return [solver_idx, token];
+    return [proxy_url, token];
 };
 ```
 
@@ -381,22 +371,21 @@ function parse_token_response_packet(packet) {
 // packet = packet buffer.
 function parse_available_solvers_count_packet(packet) {
     let view = new DataView(packet);
-    return [view.getUint32(0, true)];
+    return [view.getUint32(1, true)];
 };
 ```
 
 **Match packets:**
 
 ```javascript
-// packet = packet buffer
-if (packet.byteLength > 5) {
-   // Token Packet
-} else if (packet.byteLength == 5) {
-   // Available Solvers Result
-} else if (packet.byteLength == 4) {
-   // Failed Token Result (only solver idx is sent back)
-} else {
+// packet = Uint8Array
+let header = packet[0];
+if (header == 0) {
+   // Token Packet (success or failed)
+} else if (header == 2) {
    // Solvers Unavailable
+} else if (header == 3) {
+   // Available Solvers Result
 }
 ```
 

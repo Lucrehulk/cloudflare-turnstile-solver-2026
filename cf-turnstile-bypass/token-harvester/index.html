@@ -43,26 +43,21 @@
                 window.preload_iframes = 1;
                 window.sitekey = localStorage.sitekey;
     
-                // parse proxies by linesplitting and trimming.
-                let proxies = localStorage.proxies.split(/\r?\n/).map(p => p.trim()).filter(Boolean);
     
                 window.generate_fail_response_packet = function () {
-                    let pkt = new Uint8Array(9);
+                    let proxy_bytes = new TextEncoder().encode(window.top.proxy_url);
+                    let pkt = new Uint8Array(5 + proxy_bytes.length);
                     pkt[0] = 0;
                     pkt[1] = window.top.requester_id & 255;
                     pkt[2] = (window.top.requester_id >> 8) & 255;
                     pkt[3] = (window.top.requester_id >> 16) & 255;
                     pkt[4] = (window.top.requester_id >> 24) & 255;
-                    pkt[5] = window.top.solver_idx & 255;
-                    pkt[6] = (window.top.solver_idx >> 8) & 255;
-                    pkt[7] = (window.top.solver_idx >> 16) & 255;
-                    pkt[8] = (window.top.solver_idx >> 24) & 255;
+                    pkt[5] = proxy_bytes.length;
+                    pkt.set(proxy_bytes, 6);
                     return pkt;
                 };
     
-                async function connect_to_proxy() {
-                    let proxy = proxies[window.solver_idx];
-    
+                async function connect_to_proxy(proxy) {
                     console.log(`Requesting extension to bind tab to proxy: ${proxy}`);
     
                     return new Promise((resolve, reject) => {
@@ -113,13 +108,14 @@
     
                 token_server_socket.onmessage = async function (e) {
                     document.querySelectorAll('iframe').forEach(iframe => iframe.remove());
-                    let packet = new DataView(e.data);
                     let packet_u8 = new Uint8Array(e.data);
-                    window.solver_idx = packet.getUint32(0, true);
-                    window.requester_id = packet.getUint32(4, true);
+                    let proxy_url_len = packet_u8[1];
+                    window.proxy_url = new TextDecoder().decode(packet_u8.slice(2, 2 + proxy_url_len));
+                    let view = new DataView(e.data);
+                    window.requester_id = view.getUint32(2 + proxy_url_len, true);
                     window.js_API_spoof_fields = {};
                     window.extra_cf_turnstile_render_fields = {};
-                    let ptr = 8;
+                    let ptr = 6 + proxy_url_len;
                     let decoder = new TextDecoder();
                     while (ptr < packet_u8.length) {
                         let field_name_length = packet_u8[ptr++];
@@ -134,11 +130,11 @@
                             window.extra_cf_turnstile_render_fields[field_name] = field_value;
                         };
                     };
-                    console.log("Solver idx: " + window.solver_idx);
+                    console.log("Proxy URL: " + window.proxy_url);
                     console.log("Requester id: " + window.requester_id);
                     console.log("JavaScript API spoof fields: ", window.js_API_spoof_fields);
                     console.log("Extra render call fields: ", window.extra_cf_turnstile_render_fields);
-                    if (USE_PROXY_SOLVING) await connect_to_proxy();
+                    if (USE_PROXY_SOLVING) await connect_to_proxy(window.proxy_url);
                     start_solvers();
                 };
     
@@ -193,18 +189,16 @@
                             console.log("Token: " + v);
                             console.log('[turnstile] token:', v, '| time:', run_time());
                             let bytes = new TextEncoder().encode(v);
-                            let pkt = new Uint8Array(bytes.length + 9);
-                            // Send the token packet to the token server.
+                            let proxy_bytes = new TextEncoder().encode(window.top.proxy_url);
+                            let pkt = new Uint8Array(bytes.length + 6 + proxy_bytes.length);
                             pkt[0] = 0;
                             pkt[1] = window.top.requester_id & 255;
                             pkt[2] = (window.top.requester_id >> 8) & 255;
                             pkt[3] = (window.top.requester_id >> 16) & 255;
                             pkt[4] = (window.top.requester_id >> 24) & 255;
-                            pkt[5] = window.top.solver_idx & 255;
-                            pkt[6] = (window.top.solver_idx >> 8) & 255;
-                            pkt[7] = (window.top.solver_idx >> 16) & 255;
-                            pkt[8] = (window.top.solver_idx >> 24) & 255;
-                            pkt.set(bytes, 9);
+                            pkt[5] = proxy_bytes.length;
+                            pkt.set(proxy_bytes, 6);
+                            pkt.set(bytes, 6 + proxy_bytes.length);
                             window.top.token_server_socket.send(pkt);
                         }
                     });

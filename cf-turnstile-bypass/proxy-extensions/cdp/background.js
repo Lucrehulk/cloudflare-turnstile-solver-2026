@@ -1,19 +1,14 @@
 // Paths config for this background script to read files from, for proxies and our override script.
 
-const PROXIES_LIST_PATH = String.raw``;
+const OVERRIDE_FILE_PATH = String.raw`C:\Users\will_\Downloads\resources (2)\elitest crashr\cloudflare-turnstile-solver-2026-main\cf-turnstile-bypass\token-harvester\index.html`;
 
-const OVERRIDE_FILE_PATH = String.raw``;
-
-const INJECT_CONFIG_FILE_PATH = String.raw``;
+const INJECT_CONFIG_FILE_PATH = String.raw`C:\Users\will_\Downloads\resources (2)\elitest crashr\cloudflare-turnstile-solver-2026-main\cf-turnstile-bypass\proxy-extensions\inject_config.txt`;
 
 // Object map for proxy ID info.
 let active_proxy = null;
 
 // Object map for proxy authentication credentials.
 let active_credentials = null;
-
-// Cached text of the proxies file.
-let proxies_file_content = null;
 
 // Cached parsed config from the inject config file.
 let inject_config_content = null;
@@ -137,16 +132,6 @@ chrome.runtime.onMessage.addListener((message, sender, send_response) => {
         return true;
     }
 
-    // Cache the proxies file text.
-    if (message.action == "proxies_file_content") {
-        if (message.content) {
-            proxies_file_content = message.content;
-        } else {
-            console.error("[Proxy Bridge] Could not read proxies file:", message.error);
-        }
-        return false;
-    }
-
     // Cache the parsed inject config.
     if (message.action == "inject_config_file_content") {
         if (message.content) {
@@ -157,9 +142,9 @@ chrome.runtime.onMessage.addListener((message, sender, send_response) => {
         return false;
     }
 
-    // Send the proxies list and inject config to whichever tab requests it (content_main writes them to localStorage).
+    // Send the inject config to whichever tab requests it (content_main writes it to localStorage).
     if (message.action == "get_inject_payload") {
-        send_response({ proxies: proxies_file_content, inject_config: inject_config_content });
+        send_response({ inject_config: inject_config_content });
         return true;
     }
 
@@ -202,16 +187,6 @@ async function ensure_offscreen_document() {
     return _offscreen_promise;
 }
 
-// Read the proxies file and cache it.
-async function load_proxies_file() {
-    if (!PROXIES_LIST_PATH) return;
-    await ensure_offscreen_document();
-    chrome.runtime.sendMessage({
-        action: "read_proxies_file",
-        file_path: PROXIES_LIST_PATH
-    });
-}
-
 // Read the inject config file and cache it.
 async function load_inject_config_file() {
     if (!INJECT_CONFIG_FILE_PATH) return;
@@ -222,7 +197,6 @@ async function load_inject_config_file() {
     });
 }
 
-load_proxies_file();
 load_inject_config_file();
 
 // Attach the debugger that listens for requests and overrides the target page file with our override to a tab.

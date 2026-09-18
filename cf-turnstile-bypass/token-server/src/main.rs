@@ -81,7 +81,7 @@ async fn handle_connection(stream: TcpStream, state: Arc<Mutex<State>>) {
         match header {
             // Token result from solver. This token is received, 
             // and forwarded to the requester (receiver) with the associated requester_id.
-            // [0, ...requester_id_bytes, ...solver_idx_bytes ...token_bytes]
+            // [0, ...requester_id_bytes (u32), proxy_url_len (u8), ...proxy_url_bytes, ...token_bytes]
             // If the solve failed, there will be no token bytes in this packet.
             0 => {
                 let mut requester_id_bytes = [0u8; 4];
@@ -92,17 +92,10 @@ async fn handle_connection(stream: TcpStream, state: Arc<Mutex<State>>) {
 
                 // Route the token back to the specific requester who asked for it by looking up its requester id.
                 if let Some(requester_tx) = s.connections.get(&requester_id) {
-                    // Forward the token back to the receiver, along with the solver_idx/proxy used for that solve.
-                    let mut token_packet = Vec::new();
-                    token_packet.extend_from_slice(&raw[5..9]);
-                    
-                    // If the solve failed, there will be no token bytes in the packet,
-                    // and thus we send no token bytes to the receiver.
-                    if raw.len() > 9 {
-                        token_packet.extend_from_slice(&raw[9..]);
-                    }
-
-                    // [...solver_idx_bytes, ...token_bytes]
+                    // [0, proxy_url_len (u8), ...proxy_url_bytes, ...token_bytes]
+                    // If the solve failed, there will be no token bytes.
+                    let mut token_packet = vec![0u8];
+                    token_packet.extend_from_slice(&raw[5..]);
                     let _ = requester_tx.send(Message::Binary(token_packet));
                     println!("[+] Routed token back to requester ID: {}.", requester_id);
                 } else {
@@ -120,10 +113,12 @@ async fn handle_connection(stream: TcpStream, state: Arc<Mutex<State>>) {
 
             // On demand solve request from a requester.
             // This will forward our request for a solve to the next available solver in queue.
-            // [1, ...solver_idx_bytes, user_agent_len, ...user_agent_bytes, ...(field_name_len, ...field_name_bytes, field_value_len, ...field_value_bytes)]
+            // [1, proxy_url_len (u8), ...proxy_url_bytes, user_agent_len (u8), ...user_agent_bytes, ...(field_name_len, ...field_name_bytes, field_value_len, ...field_value_bytes)]
             1 => {
-                let ua_len = raw[5] as usize;
-                let ua_bytes = &raw[6..6 + ua_len];
+                let proxy_url_len = raw[1] as usize;
+                let proxy_url_bytes = &raw[2..2 + proxy_url_len];
+                let ua_len = raw[2 + proxy_url_len] as usize;
+                let ua_bytes = &raw[3 + proxy_url_len..3 + proxy_url_len + ua_len];
                 let requested_ua = String::from_utf8_lossy(ua_bytes).to_string();
 
                 let mut s = state.lock().await;
@@ -148,24 +143,22 @@ async fn handle_connection(stream: TcpStream, state: Arc<Mutex<State>>) {
                     }
 
                     if let Some(solver_tx) = s.connections.get(&solver_id) {
-                        // Forward the request data to the solver.
-                        let mut forward_packet = Vec::new();
-                        forward_packet.extend_from_slice(&raw[1..5]);
+                        // [1, proxy_url_len (u8), ...proxy_url_bytes, ...requester_id_bytes (u32), ...(field_name_len, ...field_name_bytes, field_value_len, ...field_value_bytes)]
+                        let mut forward_packet = vec![1u8];
+                        forward_packet.push(proxy_url_len as u8);
+                        forward_packet.extend_from_slice(proxy_url_bytes);
                         forward_packet.extend_from_slice(&id.to_le_bytes());
-                        
-                        let fields_start_idx = 6 + ua_len;
+                        let fields_start_idx = 3 + proxy_url_len + ua_len;
                         if raw.len() > fields_start_idx {
                             forward_packet.extend_from_slice(&raw[fields_start_idx..]);
                         }
-
-                        // [...solver_idx_bytes, ...requester_id_bytes, ...(field_name_len, ...field_name_bytes, field_value_len, ...field_value_bytes)]
                         let _ = solver_tx.send(Message::Binary(forward_packet));
                         println!("[+] Forwarded on-demand request from {} to solver {} (Requested UA: '{}').", id, solver_id, requested_ua);
                     }
                 } else {
                     // Indicate that this solver request couldn't go through due to unavailable solvers.
-                    // [0]
-                    let _ = tx.send(Message::Binary(vec![0]));
+                    // [2]
+                    let _ = tx.send(Message::Binary(vec![2]));
                     println!("[-] No solvers available in the queue to handle request from {} for UA '{}'.", id, requested_ua);
                 }
             }
@@ -194,13 +187,9 @@ async fn handle_connection(stream: TcpStream, state: Arc<Mutex<State>>) {
                 // Sum all available solvers across all ua HashSets.
                 let available_solvers_count = s.available_solvers_queue.values().map(|q| q.len()).sum::<usize>() as u32;
                 
-                let mut response_packet = available_solvers_count.to_le_bytes().to_vec();
-                // We push 0 so that it hits length 5. The failed solve packet back to the client is length 4. 
-                // Since our system uses length based checking to parse the packet type, adding this extra byte removes
-                // the length collision. 
-                response_packet.push(0); 
-                
-                // [...available_solvers_count_bytes, 0]
+                let mut response_packet = vec![3u8];
+                response_packet.extend_from_slice(&available_solvers_count.to_le_bytes());
+                // [3, ...available_solvers_count_bytes (u32)]
                 let _ = tx.send(Message::Binary(response_packet));
             }
 
