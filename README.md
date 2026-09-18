@@ -211,22 +211,22 @@ Then just load the extension of course.
 
 Each extension acts as a bridge for proxy routing and fingerprint spoofing, driven by `window.postMessage` events. The execution flow follows something like this:
 
-0. **Page Injections and Debugger Injections**
+1. **Page Injections and Debugger Injections**
    localStorage config edits are immediately injected upon page load. Additionally, the extension can attach cdp debuggers to any site (except for privileged chrome:// pages of course), and these debuggers can listen for outgoing web requests, and check if the info for the webrequest that went out matches the site we are currently on, and if it does it returns the override script back instead of the actual site page. 
 
-1. **Initialization**
+2. **Initialization**
    The extension listens for a `SET_TAB_PROXY` message sent by the client (which our solvers use). This payload contains the target proxy details and the specific JavaScript field data you want to spoof. *(Note: See the token server section for details on structuring this field data).*
 
-2. **Proxy Routing**
+3. **Proxy Routing**
    The extension applies the requested proxy. Because protocols vary by browser, this is handled in one of two ways: it either establishes a direct proxy connection for the tab, or it actively listens for outgoing requests and applies the proxy details to them on the fly.
 
-3. **JS API Spoofing**
+4. **JS API Spoofing**
    The requested JavaScript APIs are spoofed by overriding native prototypes. This is done using a hidden Symbol key reference pointing to a modifiable entry. This architecture is critical: it allows our script to dynamically overwrite fields with new values without breaking the page, while completely hiding the spoofing metrics from anti-bot systems like Cloudflare.
 
-4. **WebRTC Leak Prevention**
+5. **WebRTC Leak Prevention**
    To maintain operational security, WebRTC host peeking and STUN search features are disabled. This strictly blocks WebRTC host IP leaks while keeping standard WebRTC functionality enabled.
 
-5. **matchMedia Protection**
+6. **matchMedia Protection**
    `matchMedia`, a method that runs on the CSS engine, can get your real window dimensions if you spoof standard JS window dimension values. It can check and compare values like `width`/`min-width`/`max-width`, or `height`/`min-height`/`max-height`. `matchMedia` returns data in a `matches` property of the response structure, which is a boolean determining if the given query matches or aligns with the actual session's data. 
 
    If you provide `window.innerWidth` and `window.innerHeight` fields (though to fully spoof well, you'll need to spoof other fields—these just trigger the feature, as mediaQuery compares all pixel data in relation to those dimensions), `matchMedia` will be spoofed. For width and height checks, it will force the `matches` field to output the exact result it would give if your window were actually the dimensions of your spoofed `window.innerWidth` and `window.innerHeight`.
