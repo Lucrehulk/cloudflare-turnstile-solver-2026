@@ -1,4 +1,4 @@
-// Paths config for this background script to read files from, for proxies and our override script.
+// Paths config for this background script to read files from, for override file path and our inject config txt.
 
 const OVERRIDE_FILE_PATH = String.raw``;
 
