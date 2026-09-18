@@ -44,7 +44,7 @@ Still may be subject to change. Do note I am now in college so I have a lot of t
 
 ## Performance?
 
-Benchmarking turnstile solves is difficult. Output will absolutely vary depending on the site. However, I have used this method for my own personal endeavors, and these were rates I found for **realistic** (this was actually applied and used in real application, not as some standard benchmark where the numbers are made optimal) scenarios. 
+Benchmarking turnstile solves is difficult. Output will absolutely vary depending on the site. However, I have used this method for my own personal endeavors, and these were rates I found for realistic (this was actually applied and used in real application, not as some standard benchmark where the numbers are made optimal) scenarios. 
 
 In my own use cases, I've used this on high traffic WebSocket servers for webgames that are protected and gated via Cloudflare turnstile. depending on the amount of stress the server was already under, with approximately 10-15 active solvers (used varying numbers, on my 8core 16GB device), I managed to achieve rates varying between 70 solves/min - 120 solves/min. This was in realistic cases on servers with substantial traffic and load already applied to them. Not some idealized benchmark. Obviously, higher server load resulted in a lower solve rate, whereas if the server was less under stress at a given time it had a higher solve rate. 
 
