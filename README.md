@@ -192,10 +192,10 @@ Set the `PORT` value in config. That's all.
 
 | Endpoint | Header | Description |
 |----------|--------|-------------|
-| Receiver | 0 | Incoming token delivered to a requester.<br><br>**Structure:** `<0, proxy_url_len (u8), ...proxy_url_bytes, ...token_bytes>`<br>*Note: If the solver failed to get a token, then there are no token bytes.* |
-| Solver | 1 | Solve a turnstile widget request that is delivered to a solver. Field data is parsed and does whatever is necessary (`API.key` -> JavaScript API is spoofed with the given field value, `key` -> turnstile render call adds this field).<br><br>**Structure:** `<1, proxy_url_len (u8), ...proxy_url_bytes, ...requester_id_bytes (u32), ...(field_name_len (u8), ...field_name_bytes, field_value_len (u8), ...field_value_bytes)>` |
-| Receiver | 2 | A request made by a solver could not be completed because no solvers were available to accept it.<br><br>**Structure:** `<2>` |
-| Receiver | 3 | The result to the available solvers count request you made.<br><br>**Structure:** `<3, ...available_solvers_bytes (u32)>` |
+| Receiver | `0` | Incoming token delivered to a requester.<br><br>**Structure:** `<0, proxy_url_len (u8), ...proxy_url_bytes, ...token_bytes>`<br>*Note: If the solver failed to get a token, then there are no token bytes.* |
+| Solver | `1` | Solve a turnstile widget request that is delivered to a solver. Field data is parsed and does whatever is necessary (`API.key` -> JavaScript API is spoofed with the given field value, `key` -> turnstile render call adds this field).<br><br>**Structure:** `<1, proxy_url_len (u8), ...proxy_url_bytes, ...requester_id_bytes (u32), ...(field_name_len (u8), ...field_name_bytes, field_value_len (u8), ...field_value_bytes)>` |
+| Receiver | `2` | A request made by a solver could not be completed because no solvers were available to accept it.<br><br>**Structure:** `<2>` |
+| Receiver | `3` | The result to the available solvers count request you made.<br><br>**Structure:** `<3, ...available_solvers_bytes (u32)>` |
 
 **How it works:**
 
