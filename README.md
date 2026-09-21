@@ -339,8 +339,10 @@ For any JavaScript API fields you'd like to spoof, you'll also need to send that
 // fields = object, { name: value, name2: value2, ... namen: valuen }. Names and values are strings.
 function construct_solver_request_packet(proxy_url, user_agent = "", fields = {}) {
    let encoder = new TextEncoder();
+   let packet = [1];
    let proxy_url_bytes = encoder.encode(proxy_url);
-   let packet = [1, proxy_url_bytes.length, ...proxy_url_bytes];
+   packet.push(proxy_url_bytes.length);
+   packet.push(...proxy_url_bytes);
    let user_agent_bytes = encoder.encode(user_agent);
    packet.push(user_agent_bytes.length);
    packet.push(...user_agent_bytes);
@@ -348,11 +350,9 @@ function construct_solver_request_packet(proxy_url, user_agent = "", fields = {}
          let field_value = fields[field_name];
          let field_name_bytes = encoder.encode(field_name);
          let field_value_bytes = encoder.encode(field_value);
-         let field_name_len = field_name_bytes.length;
-         let field_value_len = field_value_bytes.length;
-         packet.push(field_name_len);
+         packet.push(field_name_bytes.length);
          packet.push(...field_name_bytes);
-         packet.push(field_value_len);
+         packet.push(field_value_bytes.length);
          packet.push(...field_value_bytes);
    }
    return new Uint8Array(packet);
