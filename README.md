@@ -6,6 +6,8 @@ A proof-of-concept Cloudflare Turnstile bypass system built with Rust and JavaSc
 
 Still may be subject to change. Do note I am now in college so I have a lot of things I am doing, but this is a pretty important project so I may update it more (also may not).
 
+Current task: If a turnstile widget is on pre-clearancd, it can issue a cf_clearance cookie additionally. This cookie should be returned to the user if it is set.
+
 ---
 
 ### Pros
