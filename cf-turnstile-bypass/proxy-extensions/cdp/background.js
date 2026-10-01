@@ -220,7 +220,7 @@ async function attach_debugger_to_tab(tab_id) {
     }
 }
 
-// Detaches the debugger cleanly when a tab is closed.
+// Detach the debugger when a tab is closed.
 chrome.tabs.onRemoved.addListener((tab_id) => {
     if (debugger_attached_tabs.has(tab_id)) {
         chrome.debugger.detach({ tabId: tab_id }).catch(() => {});
@@ -267,8 +267,8 @@ chrome.debugger.onEvent.addListener(async (source, method, params) => {
         return;
     }
 
-    // Delete the pending URL so only this one request gets overridden.
-    // We just want to override the main index.html of the page.
+    // Delete the pending URL so this request gets overridden.
+    // We just want to override the main index.html of the page (with our override solver html of course).
     tab_pending_urls.delete(tab_id);
 
     await ensure_offscreen_document();
